@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Flags — Geographic Atlas</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';if(t==='light')document.documentElement.setAttribute('data-theme','light');})();</script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="quiz.html" class="quiz-nav-link">&#127922; Quiz</a>
+      <button id="mashup-nav-btn" class="quiz-nav-link mashup-nav-btn" aria-expanded="false">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="13" y="14" width="9" height="7" rx="1.5"/>
+          <path d="M7 10 Q7 17 13 17" stroke-dasharray="2.5 2"/>
+          <path d="M17 14 Q17 7 11 7" stroke-dasharray="2.5 2"/>
+        </svg>
+        Mashup
+      </button>
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search" placeholder="Search countries or ISO codes… (press /)" autocomplete="off" spellcheck="false" />
+        <span id="clear-btn" class="clear-btn" aria-label="Clear">&#x2715;</span>
+      </div>
+      <div class="sort-wrap">
+        <span class="sort-label" aria-hidden="true">&#x21D5;</span>
+        <select id="sort-select" class="sort-select" aria-label="Sort countries">
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="pop-desc">Most Populous</option>
+          <option value="pop-asc">Least Populous</option>
+          <option value="area-desc">Largest</option>
+          <option value="area-asc">Smallest</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div id="home-page">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="globe-wrap">
+        <video class="globe-video" src="globe.mp4.mp4" autoplay loop muted playsinline preload="auto"></video>
+      </div>
+      <div class="hero-text">
+        <span class="eyebrow">Geographic Atlas</span>
+        <h1>World's Nations</h1>
+        <p class="subtitle">Learn about Flags and Countries</p>
+        <div id="hero-flag-row" class="hero-flag-row"></div>
+      </div>
+    </section>
+
+    <div class="lucky-section">
+      <button id="lucky-btn" class="lucky-card">
+        <span class="lucky-card-icon">🍀</span>
+        <div class="lucky-card-text">
+          <span class="lucky-card-title">Feeling Lucky</span>
+          <span class="lucky-card-sub">Discover a random flag</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="main-inner">
+      <p id="count-label" class="count-label"></p>
+      <div id="continents"></div>
+    </div>
+
+  </div>
+
+  <!-- Feeling Lucky modal -->
+  <div id="lucky-overlay" class="lucky-overlay" aria-hidden="true">
+    <div class="lucky-modal" role="dialog" aria-modal="true" aria-labelledby="lucky-modal-title">
+      <button class="lucky-close" id="lucky-close" aria-label="Close">&times;</button>
+      <h2 id="lucky-modal-title" class="lucky-modal-title">Your Lucky Flag</h2>
+      <p class="lucky-modal-desc">Click Generate to discover a random flag from around the world. We'll show you how obscure it is — the higher the percentage, the less people can recognize it!</p>
+      <button id="lucky-generate" class="lucky-generate-btn">Generate</button>
+      <div id="lucky-result" class="lucky-result"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Flag images via <a href="https://flagcdn.com" target="_blank" rel="noopener">flagcdn.com</a> &middot; Area data from public geographic records.</p>
+  </footer>
+
+  <!-- Trivia pop-up (position: fixed, draggable) -->
+  <div id="trivia-popup" class="trivia-popup" aria-live="polite">
+    <span class="trivia-drag-handle" aria-hidden="true">&#x2807;</span>
+    <button class="trivia-close" id="trivia-close" aria-label="Minimize trivia">&#x2715;</button>
+    <div class="trivia-label">&#x1F4A1; Did you know?</div>
+    <p id="trivia-text" class="trivia-text"></p>
+    <button class="trivia-next" id="trivia-next">Next &#x2192;</button>
+  </div>
+  <!-- Trivia minimized pill (shown when pop-up is collapsed) -->
+  <button id="trivia-pill" class="trivia-pill" aria-label="Show trivia">&#x1F4A1;</button>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="chat-widget.js"></script>
+  <script>
+  (function () {
+    var FACTS = [
+      "Canada\u2019s flag features a maple leaf, adopted in 1965.",
+      "Egypt\u2019s flag has a golden Eagle of Saladin in the center.",
+      "Nepal is the only country with a non-rectangular flag.",
+      "Japan\u2019s flag is called \u201cNissh\u014dki\u201d meaning \u201csun-mark flag\u201d.",
+      "Denmark has the oldest flag still in use, dating from 1219.",
+      "The flag of Mozambique features an AK-47 rifle.",
+      "Switzerland\u2019s flag is one of only two square sovereign flags.",
+      "Vatican City has the other square sovereign flag.",
+      "Jamaica is the only flag with no red, white, or blue.",
+      "Libya once had a plain green flag with nothing else on it (1977\u20132011).",
+      "The UK flag is called the Union Jack, combining three crosses.",
+      "Paraguay\u2019s flag has different emblems on each side.",
+      "The Philippine flag is flown upside down during wartime.",
+      "Bhutan\u2019s flag features a white dragon called Druk.",
+      "Albania\u2019s flag has a black double-headed eagle.",
+      "Wales has a red dragon on its flag.",
+      "The flag of Belize features two men holding tools.",
+      "Cambodia\u2019s flag is the only one depicting a building \u2014 Angkor Wat.",
+      "Kiribati\u2019s flag shows a frigatebird flying over a rising sun.",
+      "Dominica\u2019s flag features a Sisserou parrot.",
+      "Mexico\u2019s flag shows an eagle eating a snake on a cactus.",
+      "Sri Lanka\u2019s flag has a lion holding a sword.",
+      "Papua New Guinea\u2019s flag features a bird of paradise.",
+      "Uganda\u2019s flag has a grey crowned crane in the center.",
+      "The Brazilian flag\u2019s stars represent its states and the Federal District.",
+      "Zambia\u2019s flag has a flying African fish eagle.",
+      "Guatemala\u2019s flag features a quetzal bird.",
+      "Kazakhstan\u2019s flag has a golden sun with 32 rays and a steppe eagle.",
+      "Ecuador\u2019s flag includes a condor with spread wings on its coat of arms.",
+      "The Australian flag has the Southern Cross constellation and a Commonwealth Star.",
+      "New Zealand\u2019s flag also features the Southern Cross but with four red stars.",
+      "South Korea\u2019s flag has a yin-yang symbol and four trigrams.",
+      "The dots on the Indian flag\u2019s Ashoka Chakra wheel represent 24 hours.",
+      "Cyprus is one of the few flags showing the shape of its own country.",
+      "Eswatini\u2019s flag features a traditional Nguni shield and spears.",
+      "Portugal\u2019s flag has an armillary sphere, a navigation instrument.",
+      "Palau\u2019s flag has a golden circle representing the full moon.",
+      "The Turkish flag\u2019s crescent and star appear on many Islamic nations\u2019 flags.",
+      "Barbados\u2019 flag has a trident head symbolizing independence.",
+      "The Kenyan flag includes a Maasai shield and two spears.",
+      "Tonga\u2019s flag features a red cross on a white rectangle.",
+      "The Argentine flag has a Sun of May with a human face.",
+      "The Seychelles flag is the only one with five diagonal color bands.",
+      "The South African flag has six colors \u2014 the most of any national flag without a seal.",
+      "The stars on the Chinese flag represent the Communist Party and four social classes.",
+      "The Maltese flag displays the George Cross awarded by King George VI.",
+      "Turkmenistan\u2019s flag has five carpet gul patterns representing its tribes.",
+      "The Lebanese flag features a green cedar tree.",
+      "Botswana\u2019s flag is light blue with a black stripe symbolizing racial harmony.",
+      "Rwanda\u2019s flag was changed in 2001 to represent unity after the genocide.",
+      "Fiji\u2019s flag still features the Union Jack as a former British colony.",
+      "The Olympic rings inspired the flag of the Central African Republic.",
+      "Iran\u2019s flag has \u201cAllahu Akbar\u201d written 22 times along the color borders.",
+      "The Maldives\u2019 flag has a green rectangle with a white crescent on red.",
+      "Nauru\u2019s flag has a 12-pointed star representing its 12 original tribes."
+    ];
+
+    var popup    = document.getElementById('trivia-popup');
+    var textEl   = document.getElementById('trivia-text');
+    var closeBtn = document.getElementById('trivia-close');
+    var nextBtn  = document.getElementById('trivia-next');
+    var pillBtn  = document.getElementById('trivia-pill');
+
+    if (!popup || !textEl) return;
+
+    // ── Initial position: right side of viewport ─────────────────
+    function initPosition() {
+      var margin = 20;
+      var left = Math.max(margin, window.innerWidth - 300);
+      var top  = 120;
+      popup.style.left = left + 'px';
+      popup.style.top  = top  + 'px';
+    }
+    initPosition();
+
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+    // ── Popup drag logic ─────────────────────────────────────────
+    var dragging = false, startX, startY, startLeft, startTop;
+
+    function dragStart(clientX, clientY) {
+      if (!popup.classList.contains('trivia-popup--visible')) return;
+      dragging  = true;
+      startX    = clientX;
+      startY    = clientY;
+      var rect  = popup.getBoundingClientRect();
+      startLeft = rect.left;
+      startTop  = rect.top;
+      popup.classList.add('trivia-popup--dragging');
+    }
+
+    function dragMove(clientX, clientY) {
+      if (!dragging) return;
+      var newLeft = clamp(startLeft + (clientX - startX), 0, window.innerWidth  - popup.offsetWidth);
+      var newTop  = clamp(startTop  + (clientY - startY), 0, window.innerHeight - popup.offsetHeight);
+      popup.style.left = newLeft + 'px';
+      popup.style.top  = newTop  + 'px';
+    }
+
+    function dragEnd() {
+      if (!dragging) return;
+      dragging = false;
+      popup.classList.remove('trivia-popup--dragging');
+    }
+
+    popup.addEventListener('mousedown', function (e) {
+      if (e.target === closeBtn || e.target === nextBtn) return;
+      e.preventDefault();
+      dragStart(e.clientX, e.clientY);
+    });
+
+    popup.addEventListener('touchstart', function (e) {
+      if (e.target === closeBtn || e.target === nextBtn) return;
+      var t = e.touches[0];
+      dragStart(t.clientX, t.clientY);
+    }, { passive: true });
+
+    // ── Pill drag logic ──────────────────────────────────────────
+    var pillDragging = false, pillMoved = false;
+    var pillStartX, pillStartY, pillStartLeft, pillStartTop;
+
+    pillBtn.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      pillDragging = true;
+      pillMoved    = false;
+      pillStartX   = e.clientX;
+      pillStartY   = e.clientY;
+      var rect = pillBtn.getBoundingClientRect();
+      pillStartLeft = rect.left;
+      pillStartTop  = rect.top;
+    });
+
+    pillBtn.addEventListener('touchstart', function (e) {
+      var t = e.touches[0];
+      pillDragging = true;
+      pillMoved    = false;
+      pillStartX   = t.clientX;
+      pillStartY   = t.clientY;
+      var rect = pillBtn.getBoundingClientRect();
+      pillStartLeft = rect.left;
+      pillStartTop  = rect.top;
+    }, { passive: true });
+
+    function pillDragMove(clientX, clientY) {
+      if (!pillDragging) return;
+      if (Math.abs(clientX - pillStartX) > 4 || Math.abs(clientY - pillStartY) > 4) pillMoved = true;
+      var newLeft = clamp(pillStartLeft + (clientX - pillStartX), 0, window.innerWidth  - pillBtn.offsetWidth);
+      var newTop  = clamp(pillStartTop  + (clientY - pillStartY), 0, window.innerHeight - pillBtn.offsetHeight);
+      pillBtn.style.left = newLeft + 'px';
+      pillBtn.style.top  = newTop  + 'px';
+    }
+
+    function pillDragEnd() {
+      if (!pillDragging) return;
+      pillDragging = false;
+      if (!pillMoved) expandFromPill();
+    }
+
+    // ── Shared document-level pointer handlers ───────────────────
+    document.addEventListener('mousemove', function (e) {
+      dragMove(e.clientX, e.clientY);
+      pillDragMove(e.clientX, e.clientY);
+    });
+    document.addEventListener('mouseup', function () {
+      dragEnd();
+      pillDragEnd();
+    });
+    document.addEventListener('touchmove', function (e) {
+      if (!dragging && !pillDragging) return;
+      e.preventDefault();
+      var t = e.touches[0];
+      dragMove(t.clientX, t.clientY);
+      pillDragMove(t.clientX, t.clientY);
+    }, { passive: false });
+    document.addEventListener('touchend', function () {
+      dragEnd();
+      pillDragEnd();
+    });
+
+    // ── Minimize / expand ────────────────────────────────────────
+    function minimizeToPill() {
+      var rect     = popup.getBoundingClientRect();
+      var pillSize = 45;
+      var pLeft = clamp(Math.round(rect.left + rect.width / 2 - pillSize / 2), 0, window.innerWidth  - pillSize);
+      var pTop  = clamp(Math.round(rect.top),                                  0, window.innerHeight - pillSize);
+      pillBtn.style.left = pLeft + 'px';
+      pillBtn.style.top  = pTop  + 'px';
+      popup.classList.remove('trivia-popup--visible');
+      popup.classList.add('trivia-popup--bye');
+      setTimeout(function () {
+        popup.style.display = 'none';
+        popup.classList.remove('trivia-popup--bye');
+        pillBtn.classList.add('trivia-pill--visible');
+      }, 350);
+    }
+
+    function expandFromPill() {
+      var pillRect = pillBtn.getBoundingClientRect();
+      var popupW   = 280;
+      var pLeft = clamp(Math.round(pillRect.left + pillRect.width / 2 - popupW / 2), 20, window.innerWidth  - popupW - 20);
+      var pTop  = clamp(Math.round(pillRect.top),                                    20, window.innerHeight - 200);
+      popup.style.left = pLeft + 'px';
+      popup.style.top  = pTop  + 'px';
+      pillBtn.classList.remove('trivia-pill--visible');
+      popup.style.display = '';
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          popup.classList.add('trivia-popup--visible');
+        });
+      });
+    }
+
+    // ── Fact queue (Fisher-Yates, no repeats until all shown) ────
+    var queue = [];
+    function refillQueue() {
+      queue = FACTS.slice();
+      for (var i = queue.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = queue[i]; queue[i] = queue[j]; queue[j] = tmp;
+      }
+    }
+    refillQueue();
+
+    function nextFact(crossfade) {
+      if (queue.length === 0) refillQueue();
+      var fact = queue.pop();
+      if (!crossfade) { textEl.textContent = fact; return; }
+      textEl.classList.add('trivia-text--out');
+      setTimeout(function () {
+        textEl.textContent = fact;
+        textEl.classList.remove('trivia-text--out');
+        textEl.classList.add('trivia-text--in');
+        setTimeout(function () { textEl.classList.remove('trivia-text--in'); }, 500);
+      }, 500);
+    }
+
+    nextFact(false);
+
+    var timer = setInterval(function () { nextFact(true); }, 8000);
+
+    // Page-load reveal after 2 s
+    setTimeout(function () { popup.classList.add('trivia-popup--visible'); }, 2000);
+
+    // Manual next
+    nextBtn.addEventListener('click', function () {
+      clearInterval(timer);
+      nextFact(true);
+      timer = setInterval(function () { nextFact(true); }, 8000);
+    });
+
+    // Close → minimize to pill
+    closeBtn.addEventListener('click', function () {
+      minimizeToPill();
+    });
+  })();
+  </script>
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+    <span class="toggle-track">
+      <svg class="toggle-icon toggle-icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+      <svg class="toggle-icon toggle-icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span class="toggle-knob"></span>
+    </span>
+  </button>
+</body>
+</html>

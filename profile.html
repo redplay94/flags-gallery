@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — World Flags</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';if(t==='light')document.documentElement.setAttribute('data-theme','light');})();</script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="back-link">&#8592; World</a>
+      <span class="profile-header-label">My Profile</span>
+    </div>
+  </header>
+
+  <main class="profile-main">
+
+    <!-- Hero -->
+    <div class="profile-hero">
+      <div class="profile-avatar--large" id="profile-avatar-large">?</div>
+      <div class="profile-display-name" id="profile-display-name">Username</div>
+      <p class="profile-display-email" id="profile-display-email"></p>
+    </div>
+
+    <div class="profile-sections">
+
+      <!-- 1. Account Info -->
+      <section class="profile-section">
+        <div class="profile-section-header">
+          <h2>Account Info</h2>
+          <button id="edit-account-btn" class="profile-edit-btn">Edit</button>
+        </div>
+        <div class="profile-section-body">
+          <div class="profile-info-row">
+            <span class="profile-info-label">Username</span>
+            <span class="profile-info-value" id="info-username"></span>
+            <input type="text" class="profile-info-input hidden" id="edit-username" placeholder="Username" />
+          </div>
+          <div class="profile-info-row">
+            <span class="profile-info-label">Email</span>
+            <span class="profile-info-value" id="info-email"></span>
+            <input type="email" class="profile-info-input hidden" id="edit-email" placeholder="Email" />
+          </div>
+          <div class="profile-edit-actions hidden" id="account-edit-actions">
+            <button id="save-account-btn" class="profile-save-btn">Save</button>
+            <button id="cancel-account-btn" class="profile-cancel-btn">Cancel</button>
+          </div>
+          <p id="account-save-msg" class="profile-save-msg hidden">Changes saved!</p>
+        </div>
+      </section>
+
+      <!-- 2. Quiz Stats -->
+      <section class="profile-section">
+        <div class="profile-section-header">
+          <h2>Quiz Stats</h2>
+        </div>
+        <div class="profile-section-body" id="quiz-stats-body">
+          <!-- populated by JS -->
+        </div>
+      </section>
+
+      <!-- 3. Favorite Flags -->
+      <section class="profile-section">
+        <div class="profile-section-header">
+          <h2>Favorite Flags <span id="fav-count-badge" class="profile-fav-badge hidden">0</span></h2>
+        </div>
+        <div class="profile-section-body" id="profile-favs-body">
+          <!-- populated by JS -->
+        </div>
+      </section>
+
+      <!-- 4. Danger Zone -->
+      <section class="profile-section profile-section--danger">
+        <div class="profile-section-header">
+          <h2>Danger Zone</h2>
+        </div>
+        <div class="profile-section-body">
+          <p class="profile-danger-desc">Permanently delete your account and all associated data. This cannot be undone.</p>
+          <button id="delete-account-btn" class="profile-delete-btn">Delete Account</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <p><a href="index.html">&#8592; Back to World</a> &middot; Flag images via <a href="https://flagcdn.com" target="_blank" rel="noopener">flagcdn.com</a></p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="chat-widget.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var USER_KEY         = 'flags-user';
+    var ACCOUNTS_KEY     = 'flags-accounts';
+    var QUIZ_HISTORY_KEY = 'flags-quiz-history';
+
+    /* ── Guard: redirect if not logged in ────────────────────── */
+    var user;
+    try { user = JSON.parse(localStorage.getItem(USER_KEY)); } catch { user = null; }
+    if (!user) { window.location.href = 'index.html'; return; }
+
+    /* ── Populate hero ───────────────────────────────────────── */
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function refreshHero() {
+      var initial = (user.username || user.email || '?')[0].toUpperCase();
+      document.getElementById('profile-avatar-large').textContent  = initial;
+      document.getElementById('profile-display-name').textContent  = user.username || user.email || '';
+      document.getElementById('profile-display-email').textContent = user.email || '';
+      document.getElementById('info-username').textContent         = user.username || '';
+      document.getElementById('info-email').textContent            = user.email || '';
+    }
+    refreshHero();
+
+    /* ── Account edit ────────────────────────────────────────── */
+    document.getElementById('edit-account-btn').addEventListener('click', startEdit);
+    document.getElementById('save-account-btn').addEventListener('click', saveEdit);
+    document.getElementById('cancel-account-btn').addEventListener('click', cancelEdit);
+
+    function startEdit() {
+      document.getElementById('edit-username').value = user.username || '';
+      document.getElementById('edit-email').value    = user.email    || '';
+      toggleEditMode(true);
+    }
+
+    function saveEdit() {
+      var newUsername = document.getElementById('edit-username').value.trim();
+      var newEmail    = document.getElementById('edit-email').value.trim();
+      if (!newUsername || !newEmail) return;
+
+      user.username = newUsername;
+      user.email    = newEmail;
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      /* Update in accounts list too */
+      try {
+        var accounts = JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || [];
+        /* find by old values — use the stored user reference before update */
+        for (var i = 0; i < accounts.length; i++) {
+          if (accounts[i].username === document.getElementById('info-username').textContent ||
+              accounts[i].email    === document.getElementById('info-email').textContent) {
+            accounts[i].username = newUsername;
+            accounts[i].email    = newEmail;
+            break;
+          }
+        }
+        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+      } catch (e) { /* ignore */ }
+
+      toggleEditMode(false);
+      refreshHero();
+
+      /* Also update auth header */
+      if (window.AuthSystem && window.AuthSystem.updateHeaderUI) {
+        window.AuthSystem.updateHeaderUI();
+      }
+
+      var msg = document.getElementById('account-save-msg');
+      msg.classList.remove('hidden');
+      setTimeout(function () { msg.classList.add('hidden'); }, 2500);
+    }
+
+    function cancelEdit() { toggleEditMode(false); }
+
+    function toggleEditMode(on) {
+      ['info-username', 'info-email'].forEach(function (id) {
+        document.getElementById(id).classList.toggle('hidden', on);
+      });
+      ['edit-username', 'edit-email'].forEach(function (id) {
+        document.getElementById(id).classList.toggle('hidden', !on);
+      });
+      document.getElementById('account-edit-actions').classList.toggle('hidden', !on);
+      document.getElementById('edit-account-btn').style.display = on ? 'none' : '';
+    }
+
+    /* ── Quiz stats ──────────────────────────────────────────── */
+    function renderQuizStats() {
+      var history;
+      try { history = JSON.parse(localStorage.getItem(QUIZ_HISTORY_KEY)) || []; } catch { history = []; }
+      var container = document.getElementById('quiz-stats-body');
+
+      if (!history.length) {
+        container.innerHTML = '<p class="profile-no-quizzes">No quizzes played yet. <a href="quiz.html">Take a quiz</a> to see your stats!</p>';
+        return;
+      }
+
+      var total  = history.length;
+      var avgPct = Math.round(history.reduce(function (s, q) { return s + q.pct; }, 0) / total);
+      var best   = Math.max.apply(null, history.map(function (q) { return q.pct; }));
+      var last5  = history.slice(0, 5);
+
+      var barsHtml = last5.map(function (q) {
+        var color     = q.pct >= 70 ? '#22c55e' : q.pct >= 40 ? '#f59e0b' : '#ef4444';
+        var diffLabel = q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1);
+        return '<div class="profile-history-item">' +
+          '<span class="qz-diff-badge qz-diff-badge--' + esc(q.difficulty) + '">' + esc(diffLabel) + '</span>' +
+          '<div class="profile-history-bar-wrap">' +
+          '<div class="profile-history-bar" data-pct="' + q.pct + '" style="background:' + color + '"></div>' +
+          '</div>' +
+          '<span class="profile-history-pct" style="color:' + color + '">' + q.pct + '%</span>' +
+          '</div>';
+      }).join('');
+
+      container.innerHTML =
+        '<div class="profile-stats-grid">' +
+        '<div class="profile-stat-card"><span class="profile-stat-value">' + total + '</span><span class="profile-stat-label">Quizzes Played</span></div>' +
+        '<div class="profile-stat-card"><span class="profile-stat-value">' + avgPct + '%</span><span class="profile-stat-label">Average Score</span></div>' +
+        '<div class="profile-stat-card"><span class="profile-stat-value">' + best + '%</span><span class="profile-stat-label">Best Score</span></div>' +
+        '</div>' +
+        '<p class="profile-history-title">Last ' + last5.length + ' Quiz' + (last5.length > 1 ? 'zes' : '') + '</p>' +
+        '<div class="profile-history-list">' + barsHtml + '</div>';
+
+      /* Animate bars after paint */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          container.querySelectorAll('.profile-history-bar').forEach(function (bar) {
+            bar.style.width = bar.dataset.pct + '%';
+          });
+        });
+      });
+    }
+    renderQuizStats();
+
+    /* ── Favourite flags ─────────────────────────────────────── */
+    function renderFavoriteFlags() {
+      var body  = document.getElementById('profile-favs-body');
+      var badge = document.getElementById('fav-count-badge');
+      if (!body) return;
+
+      var favCodes = [];
+      try { favCodes = JSON.parse(localStorage.getItem('flags-favs') || '[]'); } catch { favCodes = []; }
+
+      var favCountries = (typeof COUNTRIES !== 'undefined')
+        ? COUNTRIES.filter(function (c) { return favCodes.indexOf(c.code) !== -1; })
+        : [];
+
+      /* Update badge */
+      if (badge) {
+        if (favCountries.length > 0) {
+          badge.textContent = favCountries.length;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+
+      if (!favCountries.length) {
+        body.innerHTML =
+          '<div class="profile-favs-empty">' +
+          '<svg class="profile-favs-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+          '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' +
+          '</svg>' +
+          '<p>No favorites yet</p>' +
+          '<span>Browse the gallery and tap \u2661 to save flags here.</span>' +
+          '</div>';
+        return;
+      }
+
+      var cards = favCountries.map(function (c) {
+        var area = (typeof formatArea !== 'undefined') ? formatArea(c.area) : c.area;
+        return '<div class="profile-fav-card">' +
+          '<button class="fav-btn fav--active profile-fav-remove" data-code="' + c.code + '" aria-label="Unfavorite">&#x2665;</button>' +
+          '<img class="profile-fav-flag" src="https://flagcdn.com/w320/' + c.code + '.png" alt="Flag of ' + esc(c.name) + '" loading="lazy">' +
+          '<div class="profile-fav-info">' +
+          '<span class="profile-fav-name">' + esc(c.name) + '</span>' +
+          '<span class="profile-fav-meta">' + esc(c.continent) + ' \u00b7 ' + area + ' km\u00b2</span>' +
+          '</div></div>';
+      }).join('');
+
+      body.innerHTML = '<div class="profile-favs-grid">' + cards + '</div>';
+    }
+    renderFavoriteFlags();
+
+    /* Re-render when any fav is toggled (via the global handler in script.js) */
+    document.addEventListener('favs-changed', function () { renderFavoriteFlags(); });
+
+    /* ── Delete account ──────────────────────────────────────── */
+    document.getElementById('delete-account-btn').addEventListener('click', function () {
+      if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(QUIZ_HISTORY_KEY);
+      localStorage.removeItem('flags-favs');
+      try {
+        var accounts = JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || [];
+        var filtered = accounts.filter(function (a) {
+          return a.username !== user.username || a.email !== user.email;
+        });
+        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(filtered));
+      } catch (e) { /* ignore */ }
+      window.location.href = 'index.html';
+    });
+
+  })();
+  </script>
+
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+    <span class="toggle-track">
+      <svg class="toggle-icon toggle-icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+      <svg class="toggle-icon toggle-icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span class="toggle-knob"></span>
+    </span>
+  </button>
+</body>
+</html>
