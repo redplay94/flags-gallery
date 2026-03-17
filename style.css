@@ -4068,3 +4068,202 @@ html, body {
   /* ── Heading scale ── */
   h1 { font-size: clamp(1.7rem, 9vw, 2.4rem); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE-ONLY LAYOUT ENHANCEMENTS (≤ 600px)
+   All changes below are scoped to mobile and do not affect desktop.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── New mobile-only elements (hidden on desktop) ── */
+.mobile-site-title {
+  display: none;
+}
+
+.mobile-header-divider {
+  display: none;
+}
+
+.mobile-hero-actions {
+  display: none;
+}
+
+.mobile-action-btn {
+  display: none;
+}
+
+/* ── Desktop: keep theme-toggle fixed as before ── */
+/* (no change needed; position: fixed in .theme-toggle is unchanged on desktop) */
+
+@media (max-width: 600px) {
+
+  /* ─────────────────────────────────────────────────────────────
+     HEADER: 2-row layout
+     Row 1: [World's Nations title]  …  [🌙 toggle] [Log In]
+     ──────────────────────────────────────────────────────────────
+     Row 2: [🔍 Search…]  [⇅ Sort]  [Filters]  [Adv Filters]
+     ───────────────────────────────────────────────────────────── */
+
+  .site-header {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .header-inner {
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    padding: 10px 16px 8px !important;
+    gap: 6px !important;
+    row-gap: 0 !important;
+  }
+
+  /* Hide the hamburger — Quiz/Mashup move to hero section */
+  .hamburger-btn {
+    display: none !important;
+  }
+
+  /* Keep main-nav in DOM (mashup needs it) but invisible */
+  .main-nav {
+    display: none !important;
+  }
+
+  /* Row 1 — left: site title */
+  .mobile-site-title {
+    display: flex !important;
+    align-items: center;
+    order: 1;
+    flex: 1 1 auto;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--text-1);
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  /* Row 1 — right: theme toggle pulled into header flow */
+  #theme-toggle.theme-toggle {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    z-index: auto !important;
+    transform: none !important;
+    order: 2;
+    flex-shrink: 0;
+  }
+
+  /* Row 1 — right: auth slot (login / user button) */
+  .auth-header-slot {
+    order: 3 !important;
+    margin-left: 0 !important;
+  }
+
+  /* Full-width divider — forces flex wrap between row 1 and row 2 */
+  .mobile-header-divider {
+    display: block !important;
+    order: 4;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    margin: 6px 0;
+  }
+
+  /* Row 2 — search bar */
+  .search-wrap {
+    order: 5 !important;
+    flex: 1 1 0 !important;
+    max-width: none !important;
+    min-width: 0;
+    margin-bottom: 2px;
+  }
+
+  /* Row 2 — sort: keep inline (override the 100%-width rule from the other query) */
+  .sort-wrap {
+    order: 6 !important;
+    flex: 0 0 auto !important;
+    margin-bottom: 2px;
+  }
+  .sort-select { width: auto !important; }
+
+  /* Row 2 — filter buttons injected by script.js */
+  .filter-toggle {
+    order: 7 !important;
+    margin-bottom: 2px;
+  }
+
+  .adv-toggle {
+    order: 8 !important;
+    margin-bottom: 2px;
+  }
+
+  /* Compensate: no longer need extra right padding for fixed toggle */
+  .header-inner {
+    padding-right: 16px !important;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     HERO SECTION: spacing between count-label and Feeling Lucky
+     ───────────────────────────────────────────────────────────── */
+
+  .lucky-section {
+    padding-top: 36px;
+    padding-bottom: 8px;
+  }
+
+  /* Spacing above count-label (below Feeling Lucky + mobile actions) */
+  .main-inner {
+    padding-top: 40px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     HERO SECTION: Quiz + Mashup buttons below Feeling Lucky
+     ───────────────────────────────────────────────────────────── */
+
+  .mobile-hero-actions {
+    display: flex !important;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 16px 0;
+  }
+
+  .mobile-action-btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text-1);
+    font-size: .9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+    transition: background .18s, border-color .18s, color .18s;
+  }
+
+  .mobile-action-btn:hover {
+    background: var(--surface);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     LEARN MORE WIDGET: move higher up, ensure clearance from
+     "Did You Know" trivia bottom sheet
+     ───────────────────────────────────────────────────────────── */
+
+  /* The trivia popup is a bottom sheet on mobile (bottom: 0).
+     Move Learn More button to upper-third of screen to avoid overlap. */
+  #cw-btn.cw-btn {
+    bottom: auto !important;
+    top: 30% !important;
+    transform: translateY(-50%) !important;
+  }
+
+  #cw-btn.cw-btn:hover {
+    transform: translateY(-50%) translateX(-2px) !important;
+  }
+}
