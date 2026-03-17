@@ -32,6 +32,7 @@
         </svg>
         <input type="text" id="search" placeholder="Search countries or ISO codes… (press /)" autocomplete="off" spellcheck="false" />
         <span id="clear-btn" class="clear-btn" aria-label="Clear">&#x2715;</span>
+        <div id="search-autocomplete" class="search-autocomplete" role="listbox" aria-label="Country suggestions"></div>
       </div>
       <div class="sort-wrap">
         <span class="sort-label" aria-hidden="true">&#x21D5;</span>
@@ -210,22 +211,48 @@
 
     function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
 
+    function isMobileView() { return window.innerWidth <= 600; }
+
     // ── Popup drag logic ─────────────────────────────────────────
     var dragging = false, startX, startY, startLeft, startTop;
+    var mobilePendingFree = false; // waiting for threshold on mobile
 
     function dragStart(clientX, clientY) {
       if (!popup.classList.contains('trivia-popup--visible')) return;
       dragging  = true;
       startX    = clientX;
       startY    = clientY;
-      var rect  = popup.getBoundingClientRect();
-      startLeft = rect.left;
-      startTop  = rect.top;
-      popup.classList.add('trivia-popup--dragging');
+      if (isMobileView() && !popup.classList.contains('trivia-popup--free')) {
+        // On mobile bottom-sheet: don't grab position yet — wait for threshold
+        mobilePendingFree = true;
+      } else {
+        mobilePendingFree = false;
+        var rect  = popup.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop  = rect.top;
+        popup.classList.add('trivia-popup--dragging');
+      }
     }
 
     function dragMove(clientX, clientY) {
       if (!dragging) return;
+      // Mobile: switch to free mode once drag threshold exceeded
+      if (mobilePendingFree) {
+        var dx = Math.abs(clientX - startX);
+        var dy = Math.abs(clientY - startY);
+        if (dx > 8 || dy > 8) {
+          mobilePendingFree = false;
+          popup.classList.add('trivia-popup--free');
+          var rect  = popup.getBoundingClientRect();
+          startLeft = rect.left;
+          startTop  = rect.top;
+          // Reset start coords to current position so movement is smooth
+          startX = clientX;
+          startY = clientY;
+          popup.classList.add('trivia-popup--dragging');
+        }
+        return; // wait until free
+      }
       var newLeft = clamp(startLeft + (clientX - startX), 0, window.innerWidth  - popup.offsetWidth);
       var newTop  = clamp(startTop  + (clientY - startY), 0, window.innerHeight - popup.offsetHeight);
       popup.style.left = newLeft + 'px';
@@ -235,6 +262,7 @@
     function dragEnd() {
       if (!dragging) return;
       dragging = false;
+      mobilePendingFree = false;
       popup.classList.remove('trivia-popup--dragging');
     }
 
@@ -325,17 +353,25 @@
       setTimeout(function () {
         popup.style.display = 'none';
         popup.classList.remove('trivia-popup--bye');
+        popup.classList.remove('trivia-popup--free'); // reset free mode on minimize
         pillBtn.classList.add('trivia-pill--visible');
       }, 350);
     }
 
     function expandFromPill() {
       var pillRect = pillBtn.getBoundingClientRect();
-      var popupW   = 280;
-      var pLeft = clamp(Math.round(pillRect.left + pillRect.width / 2 - popupW / 2), 20, window.innerWidth  - popupW - 20);
-      var pTop  = clamp(Math.round(pillRect.top),                                    20, window.innerHeight - 200);
-      popup.style.left = pLeft + 'px';
-      popup.style.top  = pTop  + 'px';
+      // On mobile, expand back as bottom sheet (no free mode)
+      if (isMobileView()) {
+        popup.classList.remove('trivia-popup--free');
+        popup.style.left = '';
+        popup.style.top  = '';
+      } else {
+        var popupW = 280;
+        var pLeft = clamp(Math.round(pillRect.left + pillRect.width / 2 - popupW / 2), 20, window.innerWidth  - popupW - 20);
+        var pTop  = clamp(Math.round(pillRect.top),                                    20, window.innerHeight - 200);
+        popup.style.left = pLeft + 'px';
+        popup.style.top  = pTop  + 'px';
+      }
       pillBtn.classList.remove('trivia-pill--visible');
       popup.style.display = '';
       requestAnimationFrame(function () {

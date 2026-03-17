@@ -2350,3 +2350,184 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () { html.classList.remove('theme-transitioning'); }, 450);
   });
 });
+
+/* ── Country detail modal ─────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  let overlayEl = null;
+
+  function injectModal() {
+    if (document.getElementById('cd-overlay')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+<div id="cd-overlay" class="cd-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="cd-modal">
+    <button class="cd-close" id="cd-close" aria-label="Close">&times;</button>
+    <div class="cd-flag-wrap">
+      <img class="cd-flag-img" id="cd-flag-img" src="" alt="" loading="lazy" />
+    </div>
+    <div class="cd-name" id="cd-name"></div>
+    <div class="cd-continent" id="cd-continent"></div>
+    <div class="cd-stats" id="cd-stats"></div>
+  </div>
+</div>`);
+    overlayEl = document.getElementById('cd-overlay');
+    document.getElementById('cd-close').addEventListener('click', closeCountryModal);
+    overlayEl.addEventListener('click', function (e) {
+      if (e.target === overlayEl) closeCountryModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlayEl && overlayEl.classList.contains('cd-overlay--visible')) {
+        closeCountryModal();
+      }
+    });
+  }
+
+  function openCountryModal(country) {
+    injectModal();
+    const overlay = document.getElementById('cd-overlay');
+    document.getElementById('cd-flag-img').src = flagUrl(country.code);
+    document.getElementById('cd-flag-img').alt = 'Flag of ' + country.name;
+    document.getElementById('cd-name').textContent = country.name;
+    document.getElementById('cd-continent').textContent = country.continent;
+
+    const stats = [];
+    if (country.capital)    stats.push({ label: 'Capital',    value: country.capital });
+    if (country.population) stats.push({ label: 'Population', value: formatPop(country.population) });
+    if (country.area)       stats.push({ label: 'Area',       value: formatArea(country.area) + ' km²' });
+    if (country.currency)   stats.push({ label: 'Currency',   value: country.currency });
+
+    document.getElementById('cd-stats').innerHTML = stats.map(s =>
+      `<div class="cd-stat"><div class="cd-stat-label">${s.label}</div><div class="cd-stat-value">${s.value}</div></div>`
+    ).join('');
+
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.classList.add('cd-overlay--visible');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCountryModal() {
+    const overlay = document.getElementById('cd-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('cd-overlay--visible');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  window.openCountryModal = openCountryModal;
+})();
+
+/* ── Search autocomplete ──────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  function initAutocomplete(searchEl, acEl) {
+    if (!searchEl || !acEl) return;
+
+    let activeIdx = -1;
+
+    function getMatches(q) {
+      if (!q || q.length < 3) return [];
+      const lower = q.toLowerCase();
+      return COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(lower) ||
+        c.code.toLowerCase().includes(lower)
+      ).slice(0, 8);
+    }
+
+    function renderDropdown(matches, q) {
+      activeIdx = -1;
+      if (matches.length === 0) {
+        acEl.classList.remove('visible');
+        acEl.innerHTML = '';
+        return;
+      }
+      acEl.innerHTML = matches.map((c, i) => `
+        <div class="search-ac-item" role="option" tabindex="-1" data-idx="${i}" data-code="${c.code}">
+          <img class="search-ac-flag" src="${flagUrl(c.code)}" alt="" loading="lazy" />
+          <span class="search-ac-name">${c.name}</span>
+          <span class="search-ac-continent">${c.continent}</span>
+        </div>
+      `).join('');
+      acEl.classList.add('visible');
+
+      acEl.querySelectorAll('.search-ac-item').forEach(function (item) {
+        item.addEventListener('mousedown', function (e) {
+          e.preventDefault(); // don't blur search
+          const idx = parseInt(item.dataset.idx, 10);
+          openMatch(matches[idx]);
+        });
+      });
+    }
+
+    function openMatch(country) {
+      acEl.classList.remove('visible');
+      acEl.innerHTML = '';
+      searchEl.value = '';
+      const clearBtn = searchEl.parentElement && searchEl.parentElement.querySelector('.clear-btn');
+      if (clearBtn) clearBtn.classList.remove('visible');
+      if (typeof window.openCountryModal === 'function') {
+        window.openCountryModal(country);
+      }
+    }
+
+    function hideDropdown() {
+      acEl.classList.remove('visible');
+      acEl.innerHTML = '';
+      activeIdx = -1;
+    }
+
+    searchEl.addEventListener('input', function () {
+      const val = searchEl.value.trim();
+      const matches = getMatches(val);
+      renderDropdown(matches, val);
+    });
+
+    searchEl.addEventListener('keydown', function (e) {
+      const items = acEl.querySelectorAll('.search-ac-item');
+      if (!acEl.classList.contains('visible') || items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('focused', i === activeIdx));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        items.forEach((el, i) => el.classList.toggle('focused', i === activeIdx));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = searchEl.value.trim();
+        const matches = getMatches(val);
+        if (matches.length === 0) return;
+        const idx = activeIdx >= 0 ? activeIdx : 0;
+        openMatch(matches[idx]);
+      } else if (e.key === 'Escape') {
+        hideDropdown();
+      }
+    });
+
+    searchEl.addEventListener('blur', function () {
+      // Delay so mousedown on item fires first
+      setTimeout(hideDropdown, 150);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Try to init on all search inputs on page
+    const searchEls = document.querySelectorAll('#search');
+    searchEls.forEach(function (searchEl) {
+      const wrap = searchEl.parentElement;
+      let acEl = wrap && wrap.querySelector('.search-autocomplete');
+      if (!acEl) {
+        // inject if not present (continent pages)
+        acEl = document.createElement('div');
+        acEl.className = 'search-autocomplete';
+        acEl.setAttribute('role', 'listbox');
+        acEl.setAttribute('aria-label', 'Country suggestions');
+        wrap.appendChild(acEl);
+      }
+      initAutocomplete(searchEl, acEl);
+    });
+  });
+})();
