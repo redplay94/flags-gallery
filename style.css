@@ -4037,16 +4037,27 @@ html, body {
   .trivia-popup--free.trivia-popup--dragging {
     cursor: grabbing !important;
   }
-  /* Trivia pill — center at bottom on mobile, overrides inline JS styles */
-  .trivia-pill {
+  /* Trivia pill — center at bottom on mobile (default position) */
+  .trivia-pill:not(.trivia-pill--mobile-dragged) {
     bottom: 24px !important;
     left: 50% !important;
     right: auto !important;
     top: auto !important;
     transform: translateX(-50%) scale(0.5);
   }
-  .trivia-pill--visible {
+  .trivia-pill--visible:not(.trivia-pill--mobile-dragged) {
     transform: translateX(-50%) scale(1) !important;
+  }
+  /* Trivia pill — freely dragged to custom position on mobile */
+  .trivia-pill.trivia-pill--mobile-dragged {
+    left:   var(--pill-x, 50%) !important;
+    top:    var(--pill-y, auto) !important;
+    bottom: auto !important;
+    right:  auto !important;
+    z-index: 950 !important;
+  }
+  .trivia-pill.trivia-pill--mobile-dragged.trivia-pill--visible {
+    transform: scale(1) !important;
   }
 
   /* ── Feeling Lucky modal → bottom sheet ── */

@@ -309,14 +309,25 @@
       if (Math.abs(clientX - pillStartX) > 4 || Math.abs(clientY - pillStartY) > 4) pillMoved = true;
       var newLeft = clamp(pillStartLeft + (clientX - pillStartX), 0, window.innerWidth  - pillBtn.offsetWidth);
       var newTop  = clamp(pillStartTop  + (clientY - pillStartY), 0, window.innerHeight - pillBtn.offsetHeight);
-      pillBtn.style.left = newLeft + 'px';
-      pillBtn.style.top  = newTop  + 'px';
+      if (window.innerWidth <= 600) {
+        // Mobile: CSS !important overrides inline styles, so use CSS custom props
+        // and a higher-specificity class to override them.
+        if (!pillBtn.classList.contains('trivia-pill--mobile-dragged')) {
+          pillBtn.classList.add('trivia-pill--mobile-dragged');
+        }
+        pillBtn.style.setProperty('--pill-x', newLeft + 'px');
+        pillBtn.style.setProperty('--pill-y', newTop  + 'px');
+      } else {
+        pillBtn.style.left = newLeft + 'px';
+        pillBtn.style.top  = newTop  + 'px';
+      }
     }
 
     function pillDragEnd() {
       if (!pillDragging) return;
       pillDragging = false;
       if (!pillMoved) expandFromPill();
+      // Position persists via --pill-x / --pill-y CSS vars (session only)
     }
 
     // ── Shared document-level pointer handlers ───────────────────
@@ -346,8 +357,18 @@
       var pillSize = 45;
       var pLeft = clamp(Math.round(rect.left + rect.width / 2 - pillSize / 2), 0, window.innerWidth  - pillSize);
       var pTop  = clamp(Math.round(rect.top),                                  0, window.innerHeight - pillSize);
-      pillBtn.style.left = pLeft + 'px';
-      pillBtn.style.top  = pTop  + 'px';
+      if (isMobileView()) {
+        // On mobile, pill always starts at default center-bottom (no custom position yet)
+        // Only set custom position if pill was previously dragged to a custom spot
+        if (pillBtn.classList.contains('trivia-pill--mobile-dragged')) {
+          pillBtn.style.setProperty('--pill-x', pLeft + 'px');
+          pillBtn.style.setProperty('--pill-y', pTop  + 'px');
+        }
+        // else: CSS default (center-bottom) handles position
+      } else {
+        pillBtn.style.left = pLeft + 'px';
+        pillBtn.style.top  = pTop  + 'px';
+      }
       popup.classList.remove('trivia-popup--visible');
       popup.classList.add('trivia-popup--bye');
       setTimeout(function () {
