@@ -11,15 +11,20 @@
 
   <header class="site-header">
     <div class="header-inner">
-      <a href="quiz.html" class="quiz-nav-link">&#127922; Quiz</a>
-      <button id="mashup-nav-btn" class="quiz-nav-link mashup-nav-btn" aria-expanded="false">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="13" y="14" width="9" height="7" rx="1.5"/>
-          <path d="M7 10 Q7 17 13 17" stroke-dasharray="2.5 2"/>
-          <path d="M17 14 Q17 7 11 7" stroke-dasharray="2.5 2"/>
-        </svg>
-        Mashup
+      <button class="hamburger-btn" id="hamburger-btn" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span><span></span><span></span>
       </button>
+      <nav class="main-nav" id="main-nav">
+        <a href="quiz.html" class="quiz-nav-link">&#127922; Quiz</a>
+        <button id="mashup-nav-btn" class="quiz-nav-link mashup-nav-btn" aria-expanded="false">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="13" y="14" width="9" height="7" rx="1.5"/>
+            <path d="M7 10 Q7 17 13 17" stroke-dasharray="2.5 2"/>
+            <path d="M17 14 Q17 7 11 7" stroke-dasharray="2.5 2"/>
+          </svg>
+          Mashup
+        </button>
+      </nav>
       <div class="search-wrap">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -39,6 +44,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile nav overlay (visible on mobile when hamburger menu is open) -->
+  <div class="mobile-nav-overlay" id="mobile-nav-overlay" aria-hidden="true"></div>
 
   <div id="home-page">
 

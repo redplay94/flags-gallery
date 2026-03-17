@@ -658,7 +658,21 @@
       '[data-theme="light"] .cw-user .cw-bubble{color:#fff;}',
       '[data-theme="light"] .cw-avatar{background:rgba(108,99,255,.08);border-color:#e0dfe8;}',
       /* mobile */
-      '@media(max-width:480px){.cw-panel{width:100vw;border-radius:14px 14px 0 0;top:auto;bottom:0;right:-100vw;transform:none;max-height:80vh;}.cw-panel.cw-open{right:0;bottom:0;}.cw-btn{padding:10px 8px 10px 12px;}.cw-btn svg{width:18px;height:18px;}}'
+      '@media(max-width:600px){' +
+        '.cw-panel{width:100vw;border-radius:16px 16px 0 0;top:auto;bottom:0;right:-100vw;transform:none;max-height:90vh;border-bottom:none;}' +
+        '.cw-panel.cw-open{right:0;bottom:0;}' +
+        '.cw-btn{padding:10px 8px 10px 12px;top:auto;bottom:80px;transform:none;}' +
+        '.cw-btn:hover{transform:translateX(-2px);}' +
+        '.cw-btn svg{width:20px;height:20px;}' +
+        '.cw-close,.cw-clear{width:44px;height:44px;display:flex;align-items:center;justify-content:center;}' +
+        '.cw-input{font-size:16px;padding:10px 16px;}' +
+        '.cw-send{width:44px;height:44px;}' +
+        '.cw-send svg{width:18px;height:18px;}' +
+        '.cw-input-row{padding:12px 14px;}' +
+        '.cw-msg{max-width:88%;}' +
+        '.cw-bubble{font-size:.9rem;}' +
+        '.cw-panel::before{content:"";display:block;position:absolute;top:10px;left:50%;transform:translateX(-50%);width:40px;height:4px;background:rgba(128,128,148,.4);border-radius:2px;}' +
+      '}'
     ].join('\n');
     document.head.appendChild(style);
   }

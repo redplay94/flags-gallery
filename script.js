@@ -2292,6 +2292,46 @@ if (document.getElementById('home-page')) {
   initContinentPage();
 }
 
+/* ── Hamburger mobile nav ─────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+  const hamburger = document.getElementById('hamburger-btn');
+  const mainNav   = document.getElementById('main-nav');
+  const overlay   = document.getElementById('mobile-nav-overlay');
+  if (!hamburger || !mainNav) return;
+
+  function openNav() {
+    hamburger.setAttribute('aria-expanded', 'true');
+    mainNav.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeNav() {
+    hamburger.setAttribute('aria-expanded', 'false');
+    mainNav.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  hamburger.addEventListener('click', function () {
+    mainNav.classList.contains('open') ? closeNav() : openNav();
+  });
+  if (overlay) overlay.addEventListener('click', closeNav);
+
+  /* Close when a nav link is followed */
+  mainNav.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', closeNav);
+  });
+
+  /* Close mashup drawer when Mashup button clicked */
+  const mashupBtn = document.getElementById('mashup-nav-btn');
+  if (mashupBtn) mashupBtn.addEventListener('click', closeNav);
+
+  /* Escape key */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && mainNav.classList.contains('open')) closeNav();
+  });
+});
+
 /* ── Theme toggle ─────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   const btn = document.getElementById('theme-toggle');
