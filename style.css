@@ -4493,3 +4493,336 @@ html, body {
     transform: translateY(-50%) translateX(-2px) !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   WORLD MAP SECTION
+   ══════════════════════════════════════════════════════════════ */
+
+.world-map-section {
+  padding: 64px 0 56px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.world-map-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.world-map-heading {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--text-1);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.world-map-subheading {
+  text-align: center;
+  color: var(--text-2);
+  font-size: .9rem;
+  margin-bottom: 28px;
+}
+
+.world-map-container {
+  height: 500px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35), 0 0 0 1px rgba(108,99,255,.08);
+  position: relative;
+}
+
+.world-map-mobile-hint {
+  display: none;
+  text-align: center;
+  color: var(--text-3);
+  font-size: .82rem;
+  margin-top: 12px;
+  letter-spacing: .02em;
+}
+
+/* Leaflet controls — match site theme */
+.leaflet-control-attribution {
+  background: var(--surface) !important;
+  color: var(--text-3) !important;
+  font-size: .65rem !important;
+}
+.leaflet-control-attribution a {
+  color: var(--text-2) !important;
+}
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-1) !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  font-size: 1rem !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--surface-2) !important;
+  color: var(--accent) !important;
+}
+.leaflet-control-zoom {
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3) !important;
+}
+.leaflet-control-zoom-in {
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* ── Country Map Modal ──────────────────────────────────────── */
+
+.country-map-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+.country-map-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.country-map-modal {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 32px 32px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(.88);
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 24px 64px rgba(0,0,0,.55), 0 0 0 1px rgba(108,99,255,.12);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  text-align: center;
+}
+.country-map-overlay.open .country-map-modal {
+  transform: scale(1);
+}
+
+.country-map-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.country-map-close:hover { background: var(--border-hover); color: var(--text-1); }
+
+/* Spinner */
+.cmap-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cmap-spin .8s linear infinite;
+  margin: 52px auto;
+}
+@keyframes cmap-spin { to { transform: rotate(360deg); } }
+
+/* Flag */
+.cmap-flag {
+  display: block;
+  width: 130px;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--flag-border-color);
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+
+/* Country name */
+.cmap-name {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  color: var(--text-1);
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+/* Stats grid */
+.cmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  text-align: left;
+}
+.cmap-stat {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cmap-label {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.cmap-value {
+  font-size: .88rem;
+  color: var(--text-1);
+  font-weight: 500;
+}
+.cmap-unavailable {
+  color: var(--text-2);
+  font-size: .9rem;
+  margin: 40px 0 20px;
+}
+
+/* ── Responsive — World Map ─────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .world-map-section { padding: 48px 0 40px; }
+  .world-map-heading { font-size: 1.6rem; margin-bottom: 4px; }
+  .world-map-container { height: 350px; }
+  .world-map-mobile-hint { display: block; }
+}
+
+@media (max-width: 640px) {
+  .country-map-modal {
+    max-width: 100%;
+    border-radius: 16px;
+    padding: 40px 18px 24px;
+  }
+  .cmap-grid { gap: 8px; }
+  .cmap-stat { padding: 10px 12px; }
+}
+
+/* ── World Map: expanded modal fields ───────────────────────── */
+
+/* Full-width stat (Languages, Currency, Timezones) */
+.cmap-stat--full {
+  grid-column: 1 / -1;
+}
+
+/* Official name subtitle */
+.cmap-official-name {
+  font-size: .8rem;
+  color: var(--text-2);
+  margin: -14px 0 18px;
+  line-height: 1.4;
+}
+
+/* Google Maps link */
+.cmap-maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 10px 20px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(108,99,255,.4);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: .84rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.cmap-maps-link:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+[data-theme="light"] .cmap-maps-link:hover { color: #fff; }
+
+/* Error / unavailable message */
+.cmap-error-msg,
+.cmap-unavailable {
+  color: var(--text-2);
+  font-size: .9rem;
+  margin: 32px 0 20px;
+  line-height: 1.5;
+}
+
+/* ── Clear Pins button (Leaflet topright control) ────────────── */
+
+.cmap-clear-pins-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  transition: background .15s, border-color .15s, color .15s;
+  line-height: 1;
+}
+.cmap-clear-pins-btn:hover {
+  background: var(--surface-2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ── Red pin DivIcon ─────────────────────────────────────────── */
+
+.cmap-red-pin {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.45));
+}
+
+/* ── Pin tooltip ─────────────────────────────────────────────── */
+
+.cmap-pin-tooltip.leaflet-tooltip {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-1) !important;
+  font-size: .76rem !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  padding: 4px 9px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35) !important;
+  white-space: nowrap !important;
+}
+.cmap-pin-tooltip.leaflet-tooltip::before {
+  border-top-color: var(--border) !important;
+}

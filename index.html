@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>World Flags — Geographic Atlas</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script>(function(){var t=localStorage.getItem('theme')||'dark';if(t==='light')document.documentElement.setAttribute('data-theme','light');})();</script>
 </head>
 <body>
@@ -102,6 +103,16 @@
 
   </div>
 
+  <!-- ── World Map ───────────────────────────────────────────── -->
+  <section id="world-map-section" class="world-map-section">
+    <div class="world-map-inner">
+      <h2 class="world-map-heading">Explore the World</h2>
+      <p class="world-map-subheading">Click any country to discover its flag and key facts</p>
+      <div id="world-map" class="world-map-container"></div>
+      <p class="world-map-mobile-hint" aria-hidden="true">Tap any country to explore</p>
+    </div>
+  </section>
+
   <!-- Feeling Lucky modal -->
   <div id="lucky-overlay" class="lucky-overlay" aria-hidden="true">
     <div class="lucky-modal" role="dialog" aria-modal="true" aria-labelledby="lucky-modal-title">
@@ -110,6 +121,14 @@
       <p class="lucky-modal-desc">Click Generate to discover a random flag from around the world. We'll show you how obscure it is — the higher the percentage, the less people can recognize it!</p>
       <button id="lucky-generate" class="lucky-generate-btn">Generate</button>
       <div id="lucky-result" class="lucky-result"></div>
+    </div>
+  </div>
+
+  <!-- ── Country Map Info Modal ──────────────────────────────── -->
+  <div id="country-map-overlay" class="country-map-overlay" aria-hidden="true">
+    <div class="country-map-modal" role="dialog" aria-modal="true" aria-labelledby="cmap-country-name">
+      <button class="country-map-close" id="country-map-close" aria-label="Close">&times;</button>
+      <div id="country-map-content" class="country-map-content"></div>
     </div>
   </div>
 
@@ -128,6 +147,7 @@
   <!-- Trivia minimized pill (shown when pop-up is collapsed) -->
   <button id="trivia-pill" class="trivia-pill" aria-label="Show trivia">&#x1F4A1;</button>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="script.js"></script>
   <script src="auth.js"></script>
   <script src="chat-widget.js"></script>
@@ -453,6 +473,383 @@
     if (mashupHeroBtn && mashupNavBtn) {
       mashupHeroBtn.addEventListener('click', function () { mashupNavBtn.click(); });
     }
+  })();
+  </script>
+
+  <!-- ── World Map Init ──────────────────────────────────────── -->
+  <script>
+  (function () {
+    if (typeof L === 'undefined' || !document.getElementById('world-map')) return;
+
+    var TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    var TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    var TILE_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>';
+    var GEOJSON_URL = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+
+    function isLight() {
+      return document.documentElement.getAttribute('data-theme') === 'light';
+    }
+
+    // ── Init map ──────────────────────────────────────────────
+    var map = L.map('world-map', {
+      center: [20, 0],
+      zoom: 2,
+      minZoom: 2,
+      maxZoom: 8,
+      scrollWheelZoom: true,
+      zoomControl: true,
+      worldCopyJump: false,
+    });
+
+    var tileLayer = L.tileLayer(isLight() ? TILE_LIGHT : TILE_DARK, {
+      attribution: TILE_ATTR,
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Swap tiles when theme changes
+    var themeObserver = new MutationObserver(function () {
+      tileLayer.setUrl(isLight() ? TILE_LIGHT : TILE_DARK);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // ── GeoJSON styles ─────────────────────────────────────────
+    function styleDefault() {
+      return { color: '#6c63ff', weight: 0.5, opacity: 0.45, fillOpacity: 0 };
+    }
+    function styleHover() {
+      return { color: '#93c5fd', weight: 1.5, opacity: 0.9, fillColor: '#93c5fd', fillOpacity: 0.1 };
+    }
+    function styleSelected() {
+      return { color: '#3b82f6', weight: 2, opacity: 1, fillColor: '#3b82f6', fillOpacity: 0.4 };
+    }
+
+    // ── Red pin icon ───────────────────────────────────────────
+    function createRedPinIcon() {
+      return L.divIcon({
+        html: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="34" viewBox="0 0 22 34">'
+            + '<path fill="#ef4444" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" d="M11 1C5.477 1 1 5.477 1 11c0 8.5 10 22 10 22S21 19.5 21 11C21 5.477 16.523 1 11 1z"/>'
+            + '<circle fill="rgba(255,255,255,0.9)" cx="11" cy="11" r="4"/>'
+            + '</svg>',
+        className: 'cmap-red-pin',
+        iconSize:   [22, 34],
+        iconAnchor: [11, 34],
+        tooltipAnchor: [0, -36],
+      });
+    }
+
+    // ── Pins state ─────────────────────────────────────────────
+    var pins = {};      // pinKey → L.Marker
+    var clearBtnEl = null;
+
+    function getPinKey(props) {
+      // Prefer ISO_A3 (stable, present even when ISO_A2 is -99)
+      var iso3 = props.ISO_A3 || props.iso_a3 || '';
+      return (iso3 && iso3 !== '-99') ? iso3 : (props.ADMIN || props.NAME || 'unknown');
+    }
+
+    function addPin(key, latlng, label) {
+      var marker = L.marker(latlng, { icon: createRedPinIcon(), zIndexOffset: 500 });
+      marker.addTo(map);
+      marker.bindTooltip(label, {
+        permanent: false,
+        direction: 'top',
+        className: 'cmap-pin-tooltip',
+        offset: [0, -2],
+      });
+      pins[key] = marker;
+      syncClearBtn();
+    }
+
+    function removePin(key) {
+      if (pins[key]) { map.removeLayer(pins[key]); delete pins[key]; }
+      syncClearBtn();
+    }
+
+    function clearAllPins() {
+      Object.keys(pins).forEach(function (k) { map.removeLayer(pins[k]); });
+      pins = {};
+      syncClearBtn();
+    }
+
+    function syncClearBtn() {
+      if (!clearBtnEl) return;
+      clearBtnEl.style.display = Object.keys(pins).length > 0 ? 'flex' : 'none';
+    }
+
+    // ── "Clear All Pins" control ───────────────────────────────
+    var ClearPinsControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function () {
+        var btn = L.DomUtil.create('button', 'cmap-clear-pins-btn');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Pins';
+        btn.title = 'Remove all pins from the map';
+        btn.style.display = 'none';
+        L.DomEvent.on(btn, 'click', function () { clearAllPins(); });
+        L.DomEvent.disableClickPropagation(btn);
+        clearBtnEl = btn;
+        return btn;
+      },
+    });
+    new ClearPinsControl().addTo(map);
+
+    // ── GeoJSON layer ──────────────────────────────────────────
+    var geojsonLayer = null;
+    var selectedLayer = null;
+
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: function () {
+          if (layer === selectedLayer) return;
+          layer.setStyle(styleHover());
+          layer.bringToFront();
+        },
+        mouseout: function () {
+          if (layer === selectedLayer) return;
+          geojsonLayer.resetStyle(layer);
+        },
+        click: function (e) {
+          L.DomEvent.stopPropagation(e);
+
+          var props = feature.properties;
+          console.log('[WorldMap] GeoJSON props:', props); // debug
+
+          // Blue overlay: reset previous, highlight new
+          if (selectedLayer && selectedLayer !== layer) {
+            geojsonLayer.resetStyle(selectedLayer);
+          }
+          selectedLayer = layer;
+          layer.setStyle(styleSelected());
+          layer.bringToFront();
+
+          // Red pin toggle
+          var pinKey  = getPinKey(props);
+          var pinName = props.ADMIN || props.admin || props.NAME || props.name || 'Unknown';
+          if (pins[pinKey]) {
+            removePin(pinKey);
+          } else {
+            addPin(pinKey, e.latlng, pinName);
+          }
+
+          // Extract codes, handling various capitalisation the GeoJSON may use
+          var iso2  = props.ISO_A2  || props.iso_a2  || '';
+          var iso3  = props.ISO_A3  || props.iso_a3  || '';
+          var admin = props.ADMIN   || props.admin   || props.NAME || props.name || '';
+
+          openCountryModal(iso2, iso3, admin);
+        },
+      });
+    }
+
+    fetch(GEOJSON_URL)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        geojsonLayer = L.geoJSON(data, {
+          style: styleDefault,
+          onEachFeature: onEachFeature,
+        }).addTo(map);
+      })
+      .catch(function () {
+        console.warn('World Map: failed to load GeoJSON boundaries.');
+      });
+
+    // Click on map background → deselect country overlay
+    map.on('click', function () {
+      if (selectedLayer && geojsonLayer) {
+        geojsonLayer.resetStyle(selectedLayer);
+        selectedLayer = null;
+      }
+    });
+
+    // ── Modal elements ─────────────────────────────────────────
+    var overlay  = document.getElementById('country-map-overlay');
+    var content  = document.getElementById('country-map-content');
+    var closeBtn = document.getElementById('country-map-close');
+
+    // ── API fetch with multi-step fallback ─────────────────────
+    function fetchCountryData(apiCode, adminName) {
+      var attempts = [];
+
+      if (apiCode) {
+        attempts.push(function () {
+          return fetch('https://restcountries.com/v3.1/alpha/' + encodeURIComponent(apiCode))
+            .then(function (r) { if (!r.ok) throw new Error('alpha fail'); return r.json(); });
+        });
+      }
+
+      if (adminName) {
+        // Exact full-text name match
+        attempts.push(function () {
+          return fetch('https://restcountries.com/v3.1/name/' + encodeURIComponent(adminName) + '?fullText=true')
+            .then(function (r) { if (!r.ok) throw new Error('name-full fail'); return r.json(); });
+        });
+        // Partial name match
+        attempts.push(function () {
+          return fetch('https://restcountries.com/v3.1/name/' + encodeURIComponent(adminName))
+            .then(function (r) { if (!r.ok) throw new Error('name-partial fail'); return r.json(); });
+        });
+      }
+
+      function tryNext(idx) {
+        if (idx >= attempts.length) return Promise.reject(new Error('all attempts failed'));
+        return attempts[idx]()
+          .then(function (data) {
+            var c = Array.isArray(data) ? data[0] : data;
+            if (!c || typeof c !== 'object') throw new Error('bad data');
+            return c;
+          })
+          .catch(function () { return tryNext(idx + 1); });
+      }
+
+      return tryNext(0);
+    }
+
+    function openCountryModal(iso2, iso3, adminName) {
+      content.innerHTML = '<div class="cmap-spinner"></div>';
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // Best code for the /alpha/ endpoint (prefers alpha-2, falls back to alpha-3)
+      var apiCode  = (iso2 && iso2 !== '-99') ? iso2
+                   : (iso3 && iso3 !== '-99') ? iso3
+                   : null;
+      // Flag code must be alpha-2 lowercase for flagcdn.com
+      var flagCode = (iso2 && iso2 !== '-99') ? iso2.toLowerCase() : null;
+
+      fetchCountryData(apiCode ? apiCode.toLowerCase() : null, adminName)
+        .then(function (c) {
+          // If we only had alpha-3, resolve alpha-2 from API response for the flag
+          var resolvedFlag = flagCode || (c.cca2 ? c.cca2.toLowerCase() : null);
+          content.innerHTML = renderCard(c, resolvedFlag);
+        })
+        .catch(function () {
+          content.innerHTML = renderError(adminName, flagCode);
+        });
+    }
+
+    // ── HTML helpers ───────────────────────────────────────────
+    function esc(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function stat(label, val) {
+      return '<div class="cmap-stat"><span class="cmap-label">' + esc(label) + '</span>'
+           + '<span class="cmap-value">' + esc(val || 'N/A') + '</span></div>';
+    }
+    function statFull(label, val) {
+      return '<div class="cmap-stat cmap-stat--full"><span class="cmap-label">' + esc(label) + '</span>'
+           + '<span class="cmap-value">' + esc(val || 'N/A') + '</span></div>';
+    }
+
+    function renderCard(c, flagCode) {
+      var commonName   = (c.name && c.name.common)   || 'Unknown';
+      var officialName = (c.name && c.name.official) || '';
+      var capital      = (c.capital && c.capital[0]) || 'N/A';
+      var region       = [c.region, c.subregion].filter(Boolean).join(' — ') || 'N/A';
+      var pop          = c.population != null ? Number(c.population).toLocaleString() : 'N/A';
+      var area         = c.area       != null ? Number(c.area).toLocaleString() + ' km²' : 'N/A';
+
+      // Currency: "Euro (€) — EUR"
+      var currencyStr = 'N/A';
+      if (c.currencies && Object.keys(c.currencies).length > 0) {
+        var cCode = Object.keys(c.currencies)[0];
+        var cur   = c.currencies[cCode];
+        currencyStr = (cur.name || cCode);
+        if (cur.symbol) currencyStr += ' (' + cur.symbol + ')';
+        currencyStr += ' \u2014 ' + cCode;
+      }
+
+      // Languages
+      var langStr = (c.languages && Object.keys(c.languages).length > 0)
+        ? Object.values(c.languages).join(', ')
+        : 'N/A';
+
+      // Timezones (cap at 4 for display)
+      var tzStr = 'N/A';
+      if (c.timezones && c.timezones.length > 0) {
+        tzStr = c.timezones.slice(0, 4).join(', ');
+        if (c.timezones.length > 4) tzStr += ' \u2026';
+      }
+
+      // Calling code
+      var callStr = 'N/A';
+      if (c.idd && c.idd.root) {
+        callStr = (c.idd.suffixes && c.idd.suffixes.length === 1)
+          ? c.idd.root + c.idd.suffixes[0]
+          : c.idd.root;
+      }
+
+      // Driving side
+      var driveStr = (c.car && c.car.side)
+        ? c.car.side.charAt(0).toUpperCase() + c.car.side.slice(1)
+        : 'N/A';
+
+      // Google Maps link
+      var mapsUrl = (c.maps && c.maps.googleMaps) ? c.maps.googleMaps : null;
+
+      var flagHtml = flagCode
+        ? '<img class="cmap-flag" src="https://flagcdn.com/w320/' + esc(flagCode) + '.png"'
+          + ' alt="Flag of ' + esc(commonName) + '" loading="lazy"'
+          + ' onerror="this.style.display=\'none\'">'
+        : '';
+
+      var officialHtml = (officialName && officialName !== commonName)
+        ? '<p class="cmap-official-name">' + esc(officialName) + '</p>'
+        : '';
+
+      var mapsHtml = mapsUrl
+        ? '<a class="cmap-maps-link" href="' + esc(mapsUrl) + '" target="_blank" rel="noopener noreferrer">'
+          + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+          + 'View on Google Maps</a>'
+        : '';
+
+      return flagHtml
+        + '<h3 class="cmap-name" id="cmap-country-name">' + esc(commonName) + '</h3>'
+        + officialHtml
+        + '<div class="cmap-grid">'
+        + stat('Capital',      capital)
+        + stat('Region',       region)
+        + stat('Population',   pop)
+        + stat('Area',         area)
+        + statFull('Currency',    currencyStr)
+        + statFull('Languages',   langStr)
+        + statFull('Timezone(s)', tzStr)
+        + stat('Calling Code', callStr)
+        + stat('Driving Side', driveStr)
+        + '</div>'
+        + mapsHtml;
+    }
+
+    function renderError(name, flagCode) {
+      var flagHtml = flagCode
+        ? '<img class="cmap-flag" src="https://flagcdn.com/w320/' + esc(flagCode) + '.png"'
+          + ' alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+        : '';
+      return flagHtml
+        + '<h3 class="cmap-name" id="cmap-country-name">' + esc(name || 'Unknown') + '</h3>'
+        + '<p class="cmap-error-msg">Could not load data for this country. Please try again.</p>';
+    }
+
+    // ── Modal open / close ─────────────────────────────────────
+    function closeModal() {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (selectedLayer && geojsonLayer) {
+        geojsonLayer.resetStyle(selectedLayer);
+        selectedLayer = null;
+      }
+    }
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    });
   })();
   </script>
 </body>
